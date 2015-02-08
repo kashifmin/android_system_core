@@ -18,9 +18,8 @@
 #define ANDROID_CALLSTACK_H
 
 #include <android/log.h>
-#include <backtrace/backtrace_constants.h>
 #include <utils/String8.h>
-#include <utils/Vector.h>
+#include <corkscrew/backtrace.h>
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -32,19 +31,42 @@ class Printer;
 // Collect/print the call stack (function, file, line) traces for a single thread.
 class CallStack {
 public:
+    enum {
+        // Prune the lowest-most stack frames until we have at most MAX_DEPTH.
+        MAX_DEPTH = 31,
+        // Placeholder for specifying the current thread when updating the stack.
+        CURRENT_THREAD = -1,
+    };
+
     // Create an empty call stack. No-op.
     CallStack();
     // Create a callstack with the current thread's stack trace.
     // Immediately dump it to logcat using the given logtag.
-    CallStack(const char* logtag, int32_t ignoreDepth=1);
+    CallStack(const char* logtag, int32_t ignoreDepth=1,
+            int32_t maxDepth=MAX_DEPTH);
+    // Copy the existing callstack (no other side effects).
+    CallStack(const CallStack& rhs);
     ~CallStack();
 
+    // Copy the existing callstack (no other side effects).
+    CallStack& operator = (const CallStack& rhs);
+
+    // Compare call stacks by their backtrace frame memory.
+    bool operator == (const CallStack& rhs) const;
+    bool operator != (const CallStack& rhs) const;
+    bool operator < (const CallStack& rhs) const;
+    bool operator >= (const CallStack& rhs) const;
+    bool operator > (const CallStack& rhs) const;
+    bool operator <= (const CallStack& rhs) const;
+
+    // Get the PC address for the stack frame specified by index.
+    const void* operator [] (int index) const;
+
     // Reset the stack frames (same as creating an empty call stack).
-    void clear() { mFrameLines.clear(); }
+    void clear();
 
     // Immediately collect the stack traces for the specified thread.
-    // The default is to dump the stack of the current call.
-    void update(int32_t ignoreDepth=1, pid_t tid=BACKTRACE_CURRENT_THREAD);
+    void update(int32_t ignoreDepth=1, int32_t maxDepth=MAX_DEPTH, pid_t tid=CURRENT_THREAD);
 
     // Dump a stack trace to the log using the supplied logtag.
     void log(const char* logtag,
@@ -61,10 +83,11 @@ public:
     void print(Printer& printer) const;
 
     // Get the count of stack frames that are in this call stack.
-    size_t size() const { return mFrameLines.size(); }
+    size_t size() const { return mCount; }
 
 private:
-    Vector<String8> mFrameLines;
+    size_t mCount;
+    backtrace_frame_t mStack[MAX_DEPTH];
 };
 
 }; // namespace android

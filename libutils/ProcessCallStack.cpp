@@ -128,7 +128,7 @@ void ProcessCallStack::clear() {
     mTimeUpdated = tm();
 }
 
-void ProcessCallStack::update() {
+void ProcessCallStack::update(int32_t maxDepth) {
     DIR *dp;
     struct dirent *ep;
     struct dirent entry;
@@ -186,13 +186,14 @@ void ProcessCallStack::update() {
         int ignoreDepth = (selfPid == tid) ? IGNORE_DEPTH_CURRENT_THREAD : 0;
 
         // Update thread's call stacks
-        threadInfo.callStack.update(ignoreDepth, tid);
+        CallStack& cs = threadInfo.callStack;
+        cs.update(ignoreDepth, maxDepth, tid);
 
         // Read/save thread name
         threadInfo.threadName = getThreadName(tid);
 
         ALOGV("%s: Got call stack for tid %d (size %zu)",
-              __FUNCTION__, tid, threadInfo.callStack.size());
+              __FUNCTION__, tid, cs.size());
     }
     if (code != 0) { // returns positive error value on error
         ALOGE("%s: Failed to readdir from %s (errno = %d, '%s')",
@@ -225,12 +226,13 @@ void ProcessCallStack::printInternal(Printer& printer, Printer& csPrinter) const
     for (size_t i = 0; i < mThreadMap.size(); ++i) {
         pid_t tid = mThreadMap.keyAt(i);
         const ThreadInfo& threadInfo = mThreadMap.valueAt(i);
+        const CallStack& cs = threadInfo.callStack;
         const String8& threadName = threadInfo.threadName;
 
         printer.printLine("");
         printer.printFormatLine("\"%s\" sysTid=%d", threadName.string(), tid);
 
-        threadInfo.callStack.print(csPrinter);
+        cs.print(csPrinter);
     }
 
     dumpProcessFooter(printer, getpid());

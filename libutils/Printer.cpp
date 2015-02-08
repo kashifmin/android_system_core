@@ -141,7 +141,6 @@ void String8Printer::printLine(const char* string) {
         return;
     }
 
-    mTarget->append(mPrefix);
     mTarget->append(string);
     mTarget->append("\n");
 }
