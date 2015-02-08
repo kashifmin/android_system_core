@@ -90,6 +90,10 @@ LOCAL_CFLAGS += -DALIGN_DOUBLE
 endif
 LOCAL_CFLAGS += -Werror
 
+ifeq ($(TARGET_BOARD_PLATFORM),mt6752)
+LOCAL_SRC_FILES += MediatekHacks.cpp
+endif
+
 LOCAL_C_INCLUDES += \
 		bionic/libc \
 		external/zlib
